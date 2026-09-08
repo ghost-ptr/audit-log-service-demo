@@ -21,16 +21,8 @@ type Event struct {
 	OccurredAtInferred bool      `json:"occurred_at_inferred"`
 }
 
-func httpHandler(w http.ResponseWriter, r *http.Request) {
-	var request EventRequest
+func NewEvent(request EventRequest) Event {
 	var event Event
-	err := json.NewDecoder(r.Body).Decode(&request)
-
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
 	currentTime := time.Now()
 
 	event.EventRequest = request
@@ -40,6 +32,20 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		event.OccurredAt = currentTime
 		event.OccurredAtInferred = true
 	}
+
+	return event
+}
+
+func httpHandler(w http.ResponseWriter, r *http.Request) {
+	var request EventRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	event := NewEvent(request)
 
 	if event.User == "" || event.Action == "" || event.Resource == "" {
 		w.WriteHeader(http.StatusBadRequest)
