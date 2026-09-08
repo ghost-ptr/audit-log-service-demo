@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -48,15 +49,12 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	event := NewEvent(request)
 
 	if event.User == "" || event.Action == "" || event.Resource == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Invalid event"))
+		http.Error(w, "Invalid event", http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK!"))
-
 	fmt.Printf("Received event: %+v\n", event)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func main() {
@@ -66,5 +64,8 @@ func main() {
 		Addr:    ":8080",
 		Handler: auditServeMux,
 	}
-	httpServer.ListenAndServe()
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		log.Fatalf("Error starting server: %v\n", err)
+	}
 }
