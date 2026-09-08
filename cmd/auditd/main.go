@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -20,6 +20,25 @@ type Event struct {
 	EventRequest
 	ReceivedAt         time.Time `json:"received_at"`
 	OccurredAtInferred bool      `json:"occurred_at_inferred"`
+}
+
+type EventStore struct {
+	mu     sync.Mutex
+	events []Event
+}
+
+func (store *EventStore) Add(event Event) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.events = append(store.events, event)
+}
+
+func (store *EventStore) Read() []Event {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	snapshots := make([]Event, len(store.events))
+	copy(snapshots, store.events)
+	return snapshots
 }
 
 func NewEvent(request EventRequest) Event {
@@ -47,13 +66,13 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	event := NewEvent(request)
-
 	if event.User == "" || event.Action == "" || event.Resource == "" {
 		http.Error(w, "Invalid event", http.StatusBadRequest)
 		return
 	}
+	//auditStore.Add(event)
 
-	fmt.Printf("Received event: %+v\n", event)
+	log.Printf("Received event: %+v", event)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -66,6 +85,6 @@ func main() {
 	}
 	err := httpServer.ListenAndServe()
 	if err != nil {
-		log.Fatalf("Error starting server: %v\n", err)
+		log.Fatalf("Error starting server: %v", err)
 	}
 }
